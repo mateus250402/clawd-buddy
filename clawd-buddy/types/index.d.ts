@@ -1,4 +1,4 @@
-export type Mood = 'idle' | 'listening' | 'working' | 'coding' | 'writing' | 'happy' | 'sad'
+export type Mood = 'idle' | 'listening' | 'searching' | 'editing' | 'web' | 'agent' | 'tooling' | 'coding' | 'writing' | 'happy' | 'sad'
 export type Meter = { label: string; percent: number; resets?: string; elapsed?: number; detail?: string }
 export type Feeling = { mood: Mood; line: string; stamp: number; until: number }
 

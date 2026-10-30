@@ -1,6 +1,6 @@
 {
   "name": "clawd-buddy",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "description": "Um amiguinho Clawd animado num painel ao lado da conversa",
   "types": "./types/index.d.ts"
 }

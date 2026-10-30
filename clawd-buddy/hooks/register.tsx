@@ -54,7 +54,8 @@ const WINDOW_MS: Record<string, number> = { '5h': 5 * 3600000, '7d': 7 * 8640000
 const colorOf = (m: Meter) =>
   m.percent >= 95 ? '#D9534F' : m.percent >= 80 ? '#E0A030' : m.label === '5h' ? '#D97757' : m.label === '7d' ? '#8b5cf6' : '#3b82e6'
 
-const BAR_W = 150
+const BAR_W = 160
+const COL_W = 22 // a Box width counts text columns, an Svg width counts pixels
 
 // The bright part is what was used; the faint part, the share of the window that has passed.
 const barSvg = (m: Meter) => {
@@ -92,6 +93,24 @@ const TOOL_LINES: Record<string, string[]> = {
   Agent: ['Chamando um ajudante!', 'Acionando a equipe! 🤝'],
 }
 
+const SEARCH_TOOLS = ['Read', 'Grep', 'Glob']
+const EDIT_TOOLS = ['Edit', 'Write', 'NotebookEdit']
+const WEB_TOOLS = ['WebSearch', 'WebFetch']
+
+const moodOf = (tool: string): Mood =>
+  SEARCH_TOOLS.includes(tool)
+    ? 'searching'
+    : EDIT_TOOLS.includes(tool)
+      ? 'editing'
+      : WEB_TOOLS.includes(tool)
+        ? 'web'
+        : tool === 'Agent'
+          ? 'agent'
+          : 'tooling'
+
+const genericLines = (tool: string) =>
+  tool.length <= 14 && !tool.startsWith('mcp__') ? [`Usando ${tool}…`] : ['Usando uma ferramenta…', 'Trabalhando aqui…']
+
 function pick(lines: string | string[], seed: number) {
   return typeof lines === 'string' ? lines : lines[seed % lines.length]
 }
@@ -102,11 +121,11 @@ const eyes = (mood: Mood) => {
       <path d="M68 42 L74 32 L80 42" stroke="${INK}" stroke-width="4" fill="none"/>`
   if (mood === 'sad')
     return `<rect x="42" y="38" width="8" height="6" fill="${INK}"/><rect x="70" y="38" width="8" height="6" fill="${INK}"/>`
-  const h = mood === 'listening' ? 6 : 12
-  const y = mood === 'listening' ? 36 : 32
+  const h = mood === 'listening' ? 6 : mood === 'editing' ? 8 : 12
+  const y = mood === 'listening' ? 36 : mood === 'editing' ? 36 : mood === 'web' ? 30 : 32
   const dx = mood === 'listening'
     ? `<animateTransform attributeName="transform" type="translate" values="-3 -3;3 -3;3 -3;-3 -3;-3 -3" dur="3s" repeatCount="indefinite"/>`
-    : mood === 'working' || mood === 'coding' ? `<animateTransform attributeName="transform" type="translate" values="-2 0;2 0;-2 0" dur="1s" repeatCount="indefinite"/>` : ''
+    : mood === 'searching' || mood === 'coding' ? `<animateTransform attributeName="transform" type="translate" values="-2 0;2 0;-2 0" dur="1s" repeatCount="indefinite"/>` : ''
   const blink = mood === 'idle' ? `<animate attributeName="height" values="${h};${h};1;${h}" keyTimes="0;0.9;0.95;1" dur="4s" repeatCount="indefinite"/>` : ''
   return `<g>${dx}<rect x="42" y="${y}" width="8" height="${h}" fill="${INK}">${blink}</rect>
     <rect x="70" y="${y}" width="8" height="${h}" fill="${INK}">${blink}</rect></g>`
@@ -120,11 +139,32 @@ const extras = (mood: Mood) => {
       <rect x="26" y="86" width="68" height="4" fill="#6b6b75"/></g>
       <rect x="22" y="72" width="12" height="14" fill="${BODY}"><animate attributeName="y" values="70;76;70" dur="0.3s" repeatCount="indefinite"/></rect>
       <rect x="86" y="72" width="12" height="14" fill="${BODY}"><animate attributeName="y" values="76;70;76" dur="0.3s" repeatCount="indefinite"/></rect>`
-  if (mood === 'working')
-    return `<g fill="${INK}" opacity="0.5">
-      <rect x="44" y="84" width="6" height="4"><animate attributeName="opacity" values="1;0;1" dur="0.4s" repeatCount="indefinite"/></rect>
-      <rect x="56" y="84" width="6" height="4"><animate attributeName="opacity" values="0;1;0" dur="0.4s" repeatCount="indefinite"/></rect>
-      <rect x="68" y="84" width="6" height="4"><animate attributeName="opacity" values="1;0;1" dur="0.5s" repeatCount="indefinite"/></rect></g>`
+  if (mood === 'searching')
+    return `<g><animateTransform attributeName="transform" type="translate" values="0 0;-34 4;-34 4;0 0" dur="2.4s" repeatCount="indefinite"/>
+      <circle cx="98" cy="48" r="9" fill="#cfe8ff" fill-opacity="0.55" stroke="${INK}" stroke-width="3"/>
+      <line x1="104" y1="55" x2="113" y2="66" stroke="${INK}" stroke-width="4" stroke-linecap="round"/></g>`
+  if (mood === 'editing') {
+    const line = (y: number, w: number, begin: string) =>
+      `<rect x="95" y="${y}" width="2" height="2" fill="${INK}"><animate attributeName="width" values="2;${w};${w}" keyTimes="0;0.6;1" dur="1.4s" begin="${begin}" repeatCount="indefinite"/></rect>`
+    return `<rect x="92" y="60" width="26" height="26" fill="#f5f0e8" stroke="#cfc8b8"/>
+      ${line(66, 18, '0s')}${line(72, 14, '0.4s')}${line(78, 16, '0.8s')}
+      <rect x="86" y="46" width="3" height="14" fill="#F2C94C"><animate attributeName="x" values="86;96;86" dur="0.9s" repeatCount="indefinite"/><animate attributeName="y" values="46;50;46" dur="0.45s" repeatCount="indefinite"/></rect>`
+  }
+  if (mood === 'web')
+    return `<g><circle cx="60" cy="9" r="8" fill="#7fb8f0" stroke="${INK}" stroke-width="1.5"/>
+      <ellipse cx="60" cy="9" rx="4" ry="8" fill="none" stroke="${INK}" stroke-width="1"><animate attributeName="rx" values="8;1;8" dur="2s" repeatCount="indefinite"/></ellipse>
+      <line x1="52" y1="9" x2="68" y2="9" stroke="${INK}" stroke-width="1"/></g>`
+  if (mood === 'agent') {
+    const mini = (x: number, begin: string) =>
+      `<g transform="translate(${x} 70)"><animateTransform attributeName="transform" type="translate" values="${x} 70;${x} 66;${x} 70" dur="0.6s" begin="${begin}" repeatCount="indefinite" additive="replace"/>
+        <rect width="14" height="9" fill="${BODY}"/><rect x="3" y="2" width="2" height="4" fill="${INK}"/><rect x="9" y="2" width="2" height="4" fill="${INK}"/>
+        <rect x="1" y="9" width="2" height="6" fill="${BODY}"/><rect x="6" y="9" width="2" height="6" fill="${BODY}"/><rect x="11" y="9" width="2" height="6" fill="${BODY}"/></g>`
+    return `${mini(2, '0s')}${mini(104, '0.3s')}`
+  }
+  if (mood === 'tooling')
+    return `<g><animateTransform attributeName="transform" type="rotate" from="0 60 9" to="360 60 9" dur="2.4s" repeatCount="indefinite"/>
+      <rect x="58" y="0" width="4" height="18" fill="#8a8a94"/><rect x="51" y="7" width="18" height="4" fill="#8a8a94"/>
+      <circle cx="60" cy="9" r="6" fill="#8a8a94"/><circle cx="60" cy="9" r="2.5" fill="#f5f0e8"/></g>`
   if (mood === 'happy')
     return `<g fill="#F2C94C"><rect x="22" y="10" width="5" height="5"><animate attributeName="opacity" values="1;0;1" dur="0.8s" repeatCount="indefinite"/></rect>
       <rect x="95" y="8" width="5" height="5"><animate attributeName="opacity" values="0;1;0" dur="0.8s" repeatCount="indefinite"/></rect>
@@ -155,8 +195,12 @@ const clawd = (mood: Mood) => {
   const bounce: Record<Mood, [string, string]> = {
     idle: ['0 -4', '1.6s'],
     listening: ['0 -2', '0.8s'],
-    working: ['0 -3', '0.5s'],
     coding: ['0 -2', '0.6s'],
+    searching: ['0 -2', '0.8s'],
+    editing: ['0 -1', '0.9s'],
+    web: ['0 -3', '0.9s'],
+    agent: ['0 -4', '0.6s'],
+    tooling: ['0 -2', '1s'],
     writing: ['0 -2', '0.7s'],
     happy: ['0 -14', '0.5s'],
     sad: ['0 2', '2.4s'],
@@ -183,22 +227,23 @@ async function feel($: Dollar, mood: Mood, lines: string | string[], ttlMs = 0) 
   await update($, feeling, () => ({ mood, line, stamp, until: ttlMs ? stamp + ttlMs : 0 }))
 }
 
-async function refreshMeters($: Dollar) {
+// Reads the session's usage; touches no state, so a draw may call it.
+async function readMeters($: Dollar): Promise<Meter[]> {
   const usage = await $.session.usage()
   const now = await $.clock.now()
-  const next: Meter[] = [
-    ...(usage.context.percent === undefined
+  return [
+    ...(usage.context?.percent === undefined
       ? []
       : [
           {
             label: 'context',
-            percent: usage.context.percent,
-            ...(usage.context.tokens === undefined
+            percent: usage.context!.percent!,
+            ...(usage.context!.tokens === undefined
               ? {}
-              : { detail: `${compact(usage.context.tokens)} de ${compact(usage.context.window)}` }),
+              : { detail: `${compact(usage.context!.tokens)} de ${compact(usage.context!.window)}` }),
           },
         ]),
-    ...usage.rateLimits.map(limit => {
+    ...(usage.rateLimits ?? []).map(limit => {
       const at = limit.resetsAt === undefined ? NaN : Date.parse(limit.resetsAt)
       return {
         label: labelOf(limit.kind),
@@ -214,8 +259,12 @@ async function refreshMeters($: Dollar) {
       }
     }),
   ].map(m => ({ ...m, percent: Math.max(0, Math.min(100, Math.round(m.percent))) }))
-  const old = await read($, meters)
-  if (JSON.stringify(old) !== JSON.stringify(next)) await update($, meters, () => next)
+}
+
+async function refreshMeters($: Dollar) {
+  const next = await readMeters($).catch(() => [] as Meter[])
+  // Always written: a value never set cannot be read while drawing.
+  await update($, meters, () => next)
 }
 
 async function rest($: Dollar) {
@@ -229,9 +278,11 @@ async function rest($: Dollar) {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
+    await update($, meters, (m: Meter[]) => m)
+    await update($, isInfoOn, (v: boolean) => v)
     await $.command.register({
       name: 'clawd',
-      description: 'Abre o Clawd grande num painel; "/clawd info" liga ou desliga as barras de uso na faixa',
+      description: 'Abre o Clawd grande num painel; "/clawd info on|off" liga ou desliga as barras de uso na faixa',
     })
     const saved = await $.store.get('isInfoOn')
     await update($, isInfoOn, () => saved === true)
@@ -246,10 +297,12 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'clawd' }, async ($, e) => {
-    if (e.args.trim().toLowerCase() === 'info') {
-      const next = !(await read($, isInfoOn))
-      await update($, isInfoOn, () => next)
+    const [word, choice] = e.args.trim().toLowerCase().split(/\s+/)
+    if (word === 'info') {
+      const was = (await $.store.get('isInfoOn')) === true
+      const next = choice === 'on' ? true : choice === 'off' ? false : !was
       await $.store.set('isInfoOn', next)
+      await update($, isInfoOn, () => next)
       if (next) await refreshMeters($)
       return { text: next ? 'Faixa do Clawd: com informações de uso.' : 'Faixa do Clawd: só o Clawd.' }
     }
@@ -259,6 +312,8 @@ export const register: Register = on => {
 
   on('prompt.submit', async ($, e, next) => {
     await update($, tools, () => 0)
+    // A copy loaded mid-session never saw session.start, so the prompt also fills the meters.
+    await refreshMeters($)
     await feel($, 'listening', THINK)
     return next(e)
   })
@@ -269,7 +324,7 @@ export const register: Register = on => {
       await feel($, 'coding', NOTEBOOK)
       return next(e)
     }
-    await feel($, 'working', TOOL_LINES[e.tool] ?? [`Usando ${e.tool}…`])
+    await feel($, moodOf(e.tool), TOOL_LINES[e.tool] ?? genericLines(e.tool))
     return next(e)
   })
 
@@ -305,28 +360,32 @@ export const register: Register = on => {
     const f = await read($, feeling)
     const order = ['5h', '7d', 'context']
     const rank = (label: string) => (order.includes(label) ? order.indexOf(label) : order.length)
-    const isOn = await read($, isInfoOn)
-    const list = isOn ? [...(await read($, meters))].sort((a, b) => rank(a.label) - rank(b.label)) : []
+    // The atom redraws the band when /clawd info flips it; the store is what lasts.
+    const isOn = (await $.store.get('isInfoOn')) === true
+    const seen = isOn ? await read($, meters).catch(() => undefined) : []
+    await read($, isInfoOn).catch(() => undefined)
+    const list = [...(seen ?? [])].sort((a, b) => rank(a.label) - rank(b.label))
     return (
-      <Box flexDirection="row" alignItems="center" justifyContent="space-between" paddingX={2}>
-        <Box flexDirection="row" alignItems="center" gap={2}>
-          <Svg source={clawd(f.mood)} alt={`Clawd, ${f.mood}`} width={72} height={60} isInteractive />
-          <Text dimColor>{f.line}</Text>
+      <Box flexDirection="row" alignItems="center" justifyContent="flex-start" paddingX={2} gap={2}>
+        <Svg source={clawd(f.mood)} alt={`Clawd, ${f.mood}`} width={60} height={50} isInteractive />
+        <Box width={20} flexShrink={1}>
+          <Text dimColor wrap="truncate">
+            {f.line}
+          </Text>
         </Box>
-        <Box flexDirection="row" alignItems="flex-start" gap={8}>
-          {list.map(m => (
-            <Box key={m.label} flexDirection="column" gap={0}>
-              <Text dimColor>
-                {m.label} · {m.percent}% de uso
-              </Text>
-              <Svg source={barSvg(m)} alt={`${m.label} ${m.percent}%`} width={BAR_W} height={8} />
-              <Text dimColor>
-                {m.detail ?? ''}
-                {m.elapsed === undefined ? '' : `${m.elapsed}% tempo`}
-                {m.resets === undefined ? '' : ` · reinicia ${m.resets}`}
-              </Text>
-            </Box>
-          ))}
+        {isOn && list.length === 0 && <Text dimColor>uso: aguardando dados…</Text>}
+        <Box flexDirection="row" alignItems="flex-start" justifyContent="flex-start" gap={2} flexShrink={0}>
+        {list.map(m => (
+          <Box key={m.label} flexDirection="column" gap={0} width={COL_W} flexShrink={0}>
+            <Text dimColor wrap="truncate">
+              {m.label} · {m.percent}% de uso
+            </Text>
+            <Svg source={barSvg(m)} alt={`${m.label} ${m.percent}%`} width={BAR_W} height={8} />
+            <Text dimColor wrap="truncate">
+              {[m.detail, m.resets === undefined ? undefined : `reinicia ${m.resets}`].filter(Boolean).join(' · ')}
+            </Text>
+          </Box>
+        ))}
         </Box>
       </Box>
     )
