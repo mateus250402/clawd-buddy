@@ -366,7 +366,7 @@ export const register: Register = on => {
     await read($, isInfoOn).catch(() => undefined)
     const list = [...(seen ?? [])].sort((a, b) => rank(a.label) - rank(b.label))
     return (
-      <Box flexDirection="row" alignItems="center" justifyContent="flex-start" paddingX={2} gap={2}>
+      <Box flexDirection="row" flexWrap="wrap" alignItems="center" justifyContent="flex-start" paddingX={2} gap={2}>
         <Svg source={clawd(f.mood)} alt={`Clawd, ${f.mood}`} width={60} height={50} isInteractive />
         <Box width={20} flexShrink={1}>
           <Text dimColor wrap="truncate">
@@ -374,7 +374,6 @@ export const register: Register = on => {
           </Text>
         </Box>
         {isOn && list.length === 0 && <Text dimColor>uso: aguardando dados…</Text>}
-        <Box flexDirection="row" alignItems="flex-start" justifyContent="flex-start" gap={2} flexShrink={0}>
         {list.map(m => (
           <Box key={m.label} flexDirection="column" gap={0} width={COL_W} flexShrink={0}>
             <Text dimColor wrap="truncate">
@@ -386,7 +385,6 @@ export const register: Register = on => {
             </Text>
           </Box>
         ))}
-        </Box>
       </Box>
     )
   })
