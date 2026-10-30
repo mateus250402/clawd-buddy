@@ -1,0 +1,13 @@
+{
+  "name": "my-mods",
+  "owner": {
+    "name": "mateus250402"
+  },
+  "plugins": [
+    {
+      "name": "clawd-buddy",
+      "source": "./clawd-buddy",
+      "description": "Clawd animado que reage ao chat"
+    }
+  ]
+}
